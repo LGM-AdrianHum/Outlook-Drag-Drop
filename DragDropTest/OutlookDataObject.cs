@@ -152,22 +152,22 @@ namespace DragDropTest
         /// <summary>
         /// Holds the <see cref="System.Windows.Forms.IDataObject"/> that this class is wrapping
         /// </summary>
-        private System.Windows.Forms.IDataObject underlyingDataObject;
+        private readonly System.Windows.Forms.IDataObject _underlyingDataObject;
 
         /// <summary>
         /// Holds the <see cref="System.Runtime.InteropServices.ComTypes.IDataObject"/> interface to the <see cref="System.Windows.Forms.IDataObject"/> that this class is wrapping.
         /// </summary>
-        private System.Runtime.InteropServices.ComTypes.IDataObject comUnderlyingDataObject;
+        private System.Runtime.InteropServices.ComTypes.IDataObject _comUnderlyingDataObject;
 
         /// <summary>
         /// Holds the internal ole <see cref="System.Windows.Forms.IDataObject"/> to the <see cref="System.Windows.Forms.IDataObject"/> that this class is wrapping.
         /// </summary>
-        private System.Windows.Forms.IDataObject oleUnderlyingDataObject;
+        private System.Windows.Forms.IDataObject _oleUnderlyingDataObject;
 
         /// <summary>
         /// Holds the <see cref="MethodInfo"/> of the "GetDataFromHGLOBLAL" method of the internal ole <see cref="System.Windows.Forms.IDataObject"/>.
         /// </summary>
-        private MethodInfo getDataFromHGLOBLALMethod;
+        private MethodInfo _getDataFromHgloblalMethod;
 
         #endregion
 
@@ -180,19 +180,20 @@ namespace DragDropTest
         public OutlookDataObject(System.Windows.Forms.IDataObject underlyingDataObject)
         {
             //get the underlying dataobject and its ComType IDataObject interface to it
-            this.underlyingDataObject = underlyingDataObject;
-            comUnderlyingDataObject = (System.Runtime.InteropServices.ComTypes.IDataObject)this.underlyingDataObject;
+            this._underlyingDataObject = underlyingDataObject;
+            _comUnderlyingDataObject = (System.Runtime.InteropServices.ComTypes.IDataObject)this._underlyingDataObject;
 
             //get the internal ole dataobject and its GetDataFromHGLOBLAL so it can be called later
-            var innerDataField = this.underlyingDataObject.GetType().GetField("innerData", BindingFlags.NonPublic | BindingFlags.Instance);
-            oleUnderlyingDataObject = (System.Windows.Forms.IDataObject)innerDataField.GetValue(this.underlyingDataObject);
-            getDataFromHGLOBLALMethod = oleUnderlyingDataObject.GetType().GetMethod("GetDataFromHGLOBLAL", BindingFlags.NonPublic | BindingFlags.Instance);
+            var innerDataField = this._underlyingDataObject.GetType().GetField("innerData", BindingFlags.NonPublic | BindingFlags.Instance);
+            _oleUnderlyingDataObject = (System.Windows.Forms.IDataObject)innerDataField.GetValue(this._underlyingDataObject);
+            _getDataFromHgloblalMethod = _oleUnderlyingDataObject.GetType().GetMethod("GetDataFromHGLOBLAL", BindingFlags.NonPublic | BindingFlags.Instance);
         }
 
         #endregion
 
         #region IDataObject Members
 
+        /// <inheritdoc />
         /// <summary>
         /// Retrieves the data associated with the specified class type format.
         /// </summary>
@@ -218,6 +219,7 @@ namespace DragDropTest
             return GetData(format, true);
         }
 
+        /// <inheritdoc />
         /// <summary>
         /// Retrieves the data associated with the specified data format, using a Boolean to determine whether to convert the data to the format.
         /// </summary>
@@ -238,7 +240,7 @@ namespace DragDropTest
                     try
                     {
                         //use the underlying IDataObject to get the FileGroupDescriptor as a MemoryStream
-                        var fileGroupDescriptorStream = (MemoryStream)underlyingDataObject.GetData("FileGroupDescriptor", autoConvert);
+                        var fileGroupDescriptorStream = (MemoryStream)_underlyingDataObject.GetData("FileGroupDescriptor", autoConvert);
                         var fileGroupDescriptorBytes = new byte[fileGroupDescriptorStream.Length];
                         fileGroupDescriptorStream.Read(fileGroupDescriptorBytes, 0, fileGroupDescriptorBytes.Length);
                         fileGroupDescriptorStream.Close();
@@ -284,7 +286,7 @@ namespace DragDropTest
                     try
                     {
                         //use the underlying IDataObject to get the FileGroupDescriptorW as a MemoryStream
-                        var fileGroupDescriptorStream = (MemoryStream)underlyingDataObject.GetData("FileGroupDescriptorW");
+                        var fileGroupDescriptorStream = (MemoryStream)_underlyingDataObject.GetData("FileGroupDescriptorW");
                         var fileGroupDescriptorBytes = new byte[fileGroupDescriptorStream.Length];
                         fileGroupDescriptorStream.Read(fileGroupDescriptorBytes, 0, fileGroupDescriptorBytes.Length);
                         fileGroupDescriptorStream.Close();
@@ -346,7 +348,7 @@ namespace DragDropTest
             }
 
             //use underlying IDataObject to handle getting of data
-            return underlyingDataObject.GetData(format, autoConvert);
+            return _underlyingDataObject.GetData(format, autoConvert);
         }
 
         /// <summary>
@@ -371,7 +373,7 @@ namespace DragDropTest
             var medium = new STGMEDIUM();
 
             //using the Com IDataObject interface get the data using the defined FORMATETC
-            comUnderlyingDataObject.GetData(ref formatetc, out medium);
+            _comUnderlyingDataObject.GetData(ref formatetc, out medium);
 
             //retrieve the data depending on the returned store type
             switch(medium.tymed)
@@ -454,12 +456,13 @@ namespace DragDropTest
                     //to handle a HGlobal the exisitng "GetDataFromHGLOBLAL" method is invoked via
                     //reflection
 
-                    return (MemoryStream)getDataFromHGLOBLALMethod.Invoke(oleUnderlyingDataObject, new object[] { DataFormats.GetFormat((short)formatetc.cfFormat).Name, medium.unionmember });
+                    return (MemoryStream)_getDataFromHgloblalMethod.Invoke(_oleUnderlyingDataObject, new object[] { DataFormats.GetFormat((short)formatetc.cfFormat).Name, medium.unionmember });
             }
 
             return null;
         }
 
+        /// <inheritdoc />
         /// <summary>
         /// Determines whether data stored in this instance is associated with, or can be converted to, the specified format.
         /// </summary>
@@ -469,9 +472,10 @@ namespace DragDropTest
         /// </returns>
         public bool GetDataPresent(Type format)
         {
-            return underlyingDataObject.GetDataPresent(format);
+            return _underlyingDataObject.GetDataPresent(format);
         }
 
+        /// <inheritdoc />
         /// <summary>
         /// Determines whether data stored in this instance is associated with, or can be converted to, the specified format.
         /// </summary>
@@ -481,9 +485,10 @@ namespace DragDropTest
         /// </returns>
         public bool GetDataPresent(string format)
         {
-            return underlyingDataObject.GetDataPresent(format);
+            return _underlyingDataObject.GetDataPresent(format);
         }
 
+        /// <inheritdoc />
         /// <summary>
         /// Determines whether data stored in this instance is associated with the specified format, using a Boolean value to determine whether to convert the data to the format.
         /// </summary>
@@ -494,9 +499,10 @@ namespace DragDropTest
         /// </returns>
         public bool GetDataPresent(string format, bool autoConvert)
         {
-            return underlyingDataObject.GetDataPresent(format, autoConvert);
+            return _underlyingDataObject.GetDataPresent(format, autoConvert);
         }
 
+        /// <inheritdoc />
         /// <summary>
         /// Returns a list of all formats that data stored in this instance is associated with or can be converted to.
         /// </summary>
@@ -505,9 +511,10 @@ namespace DragDropTest
         /// </returns>
         public string[] GetFormats()
         {
-            return underlyingDataObject.GetFormats();
+            return _underlyingDataObject.GetFormats();
         }
 
+        /// <inheritdoc />
         /// <summary>
         /// Gets a list of all formats that data stored in this instance is associated with or can be converted to, using a Boolean value to determine whether to retrieve all formats that the data can be converted to or only native data formats.
         /// </summary>
@@ -517,18 +524,20 @@ namespace DragDropTest
         /// </returns>
         public string[] GetFormats(bool autoConvert)
         {
-            return underlyingDataObject.GetFormats(autoConvert);
+            return _underlyingDataObject.GetFormats(autoConvert);
         }
 
+        /// <inheritdoc />
         /// <summary>
         /// Stores the specified data in this instance, using the class of the data for the format.
         /// </summary>
         /// <param name="data">The data to store.</param>
         public void SetData(object data)
         {
-            underlyingDataObject.SetData(data);
+            _underlyingDataObject.SetData(data);
         }
 
+        /// <inheritdoc />
         /// <summary>
         /// Stores the specified data and its associated class type in this instance.
         /// </summary>
@@ -536,9 +545,10 @@ namespace DragDropTest
         /// <param name="data">The data to store.</param>
         public void SetData(Type format, object data)
         {
-            underlyingDataObject.SetData(format, data);
+            _underlyingDataObject.SetData(format, data);
         }
 
+        /// <inheritdoc />
         /// <summary>
         /// Stores the specified data and its associated format in this instance.
         /// </summary>
@@ -546,9 +556,10 @@ namespace DragDropTest
         /// <param name="data">The data to store.</param>
         public void SetData(string format, object data)
         {
-            underlyingDataObject.SetData(format, data);
+            _underlyingDataObject.SetData(format, data);
         }
 
+        /// <inheritdoc />
         /// <summary>
         /// Stores the specified data and its associated format in this instance, using a Boolean value to specify whether the data can be converted to another format.
         /// </summary>
@@ -557,7 +568,7 @@ namespace DragDropTest
         /// <param name="data">The data to store.</param>
         public void SetData(string format, bool autoConvert, object data)
         {
-            underlyingDataObject.SetData(format, autoConvert, data);
+            _underlyingDataObject.SetData(format, autoConvert, data);
         }
 
         #endregion

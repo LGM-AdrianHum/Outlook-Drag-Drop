@@ -17,15 +17,14 @@
 
 using System;
 using System.IO;
-using System.Collections.Generic;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
-using System.Text;
-using System.Reflection;
 using System.Windows.Forms;
 
-namespace iwantedue.Windows.Forms
+namespace DragDropTest
 {
+    /// <inheritdoc />
     /// <summary>
     /// Provides a format-independant machanism for transfering data with support for outlook messages and attachments.
     /// </summary>
@@ -182,12 +181,12 @@ namespace iwantedue.Windows.Forms
         {
             //get the underlying dataobject and its ComType IDataObject interface to it
             this.underlyingDataObject = underlyingDataObject;
-            this.comUnderlyingDataObject = (System.Runtime.InteropServices.ComTypes.IDataObject)this.underlyingDataObject;
+            comUnderlyingDataObject = (System.Runtime.InteropServices.ComTypes.IDataObject)this.underlyingDataObject;
 
             //get the internal ole dataobject and its GetDataFromHGLOBLAL so it can be called later
-            FieldInfo innerDataField = this.underlyingDataObject.GetType().GetField("innerData", BindingFlags.NonPublic | BindingFlags.Instance);
-            this.oleUnderlyingDataObject = (System.Windows.Forms.IDataObject)innerDataField.GetValue(this.underlyingDataObject);
-            this.getDataFromHGLOBLALMethod = this.oleUnderlyingDataObject.GetType().GetMethod("GetDataFromHGLOBLAL", BindingFlags.NonPublic | BindingFlags.Instance);
+            var innerDataField = this.underlyingDataObject.GetType().GetField("innerData", BindingFlags.NonPublic | BindingFlags.Instance);
+            oleUnderlyingDataObject = (System.Windows.Forms.IDataObject)innerDataField.GetValue(this.underlyingDataObject);
+            getDataFromHGLOBLALMethod = oleUnderlyingDataObject.GetType().GetMethod("GetDataFromHGLOBLAL", BindingFlags.NonPublic | BindingFlags.Instance);
         }
 
         #endregion
@@ -203,9 +202,10 @@ namespace iwantedue.Windows.Forms
         /// </returns>
         public object GetData(Type format)
         {
-            return this.GetData(format.FullName);
+            return GetData(format.FullName);
         }
 
+        /// <inheritdoc />
         /// <summary>
         /// Retrieves the data associated with the specified data format.
         /// </summary>
@@ -215,7 +215,7 @@ namespace iwantedue.Windows.Forms
         /// </returns>
         public object GetData(string format)
         {
-            return this.GetData(format, true);
+            return GetData(format, true);
         }
 
         /// <summary>
@@ -234,12 +234,12 @@ namespace iwantedue.Windows.Forms
                 case "FileGroupDescriptor":
                     //override the default handling of FileGroupDescriptor which returns a
                     //MemoryStream and instead return a string array of file names
-                    IntPtr fileGroupDescriptorAPointer = IntPtr.Zero;
+                    var fileGroupDescriptorAPointer = IntPtr.Zero;
                     try
                     {
                         //use the underlying IDataObject to get the FileGroupDescriptor as a MemoryStream
-                        MemoryStream fileGroupDescriptorStream = (MemoryStream)this.underlyingDataObject.GetData("FileGroupDescriptor", autoConvert);
-                        byte[] fileGroupDescriptorBytes = new byte[fileGroupDescriptorStream.Length];
+                        var fileGroupDescriptorStream = (MemoryStream)underlyingDataObject.GetData("FileGroupDescriptor", autoConvert);
+                        var fileGroupDescriptorBytes = new byte[fileGroupDescriptorStream.Length];
                         fileGroupDescriptorStream.Read(fileGroupDescriptorBytes, 0, fileGroupDescriptorBytes.Length);
                         fileGroupDescriptorStream.Close();
 
@@ -248,20 +248,20 @@ namespace iwantedue.Windows.Forms
                         Marshal.Copy(fileGroupDescriptorBytes, 0, fileGroupDescriptorAPointer, fileGroupDescriptorBytes.Length);
 
                         //marshal the unmanaged memory to to FILEGROUPDESCRIPTORA struct
-                        object fileGroupDescriptorObject = Marshal.PtrToStructure(fileGroupDescriptorAPointer, typeof(NativeMethods.FILEGROUPDESCRIPTORA));
-                        NativeMethods.FILEGROUPDESCRIPTORA fileGroupDescriptor = (NativeMethods.FILEGROUPDESCRIPTORA)fileGroupDescriptorObject;
+                        var fileGroupDescriptorObject = Marshal.PtrToStructure(fileGroupDescriptorAPointer, typeof(NativeMethods.FILEGROUPDESCRIPTORA));
+                        var fileGroupDescriptor = (NativeMethods.FILEGROUPDESCRIPTORA)fileGroupDescriptorObject;
 
                         //create a new array to store file names in of the number of items in the file group descriptor
-                        string[] fileNames = new string[fileGroupDescriptor.cItems];
+                        var fileNames = new string[fileGroupDescriptor.cItems];
 
                         //get the pointer to the first file descriptor
-                        IntPtr fileDescriptorPointer = (IntPtr)((int)fileGroupDescriptorAPointer + Marshal.SizeOf(fileGroupDescriptorAPointer));
+                        var fileDescriptorPointer = (IntPtr)((int)fileGroupDescriptorAPointer + Marshal.SizeOf(fileGroupDescriptorAPointer));
 
                         //loop for the number of files acording to the file group descriptor
-                        for(int fileDescriptorIndex = 0;fileDescriptorIndex < fileGroupDescriptor.cItems;fileDescriptorIndex++)
+                        for(var fileDescriptorIndex = 0;fileDescriptorIndex < fileGroupDescriptor.cItems;fileDescriptorIndex++)
                         {
                             //marshal the pointer top the file descriptor as a FILEDESCRIPTORA struct and get the file name
-                            NativeMethods.FILEDESCRIPTORA fileDescriptor = (NativeMethods.FILEDESCRIPTORA)Marshal.PtrToStructure(fileDescriptorPointer, typeof(NativeMethods.FILEDESCRIPTORA));
+                            var fileDescriptor = (NativeMethods.FILEDESCRIPTORA)Marshal.PtrToStructure(fileDescriptorPointer, typeof(NativeMethods.FILEDESCRIPTORA));
                             fileNames[fileDescriptorIndex] = fileDescriptor.cFileName;
 
                             //move the file descriptor pointer to the next file descriptor
@@ -280,12 +280,12 @@ namespace iwantedue.Windows.Forms
                 case "FileGroupDescriptorW":
                     //override the default handling of FileGroupDescriptorW which returns a
                     //MemoryStream and instead return a string array of file names
-                    IntPtr fileGroupDescriptorWPointer = IntPtr.Zero;
+                    var fileGroupDescriptorWPointer = IntPtr.Zero;
                     try
                     {
                         //use the underlying IDataObject to get the FileGroupDescriptorW as a MemoryStream
-                        MemoryStream fileGroupDescriptorStream = (MemoryStream)this.underlyingDataObject.GetData("FileGroupDescriptorW");
-                        byte[] fileGroupDescriptorBytes = new byte[fileGroupDescriptorStream.Length];
+                        var fileGroupDescriptorStream = (MemoryStream)underlyingDataObject.GetData("FileGroupDescriptorW");
+                        var fileGroupDescriptorBytes = new byte[fileGroupDescriptorStream.Length];
                         fileGroupDescriptorStream.Read(fileGroupDescriptorBytes, 0, fileGroupDescriptorBytes.Length);
                         fileGroupDescriptorStream.Close();
 
@@ -294,20 +294,20 @@ namespace iwantedue.Windows.Forms
                         Marshal.Copy(fileGroupDescriptorBytes, 0, fileGroupDescriptorWPointer, fileGroupDescriptorBytes.Length);
 
                         //marshal the unmanaged memory to to FILEGROUPDESCRIPTORW struct
-                        object fileGroupDescriptorObject = Marshal.PtrToStructure(fileGroupDescriptorWPointer, typeof(NativeMethods.FILEGROUPDESCRIPTORW));
-                        NativeMethods.FILEGROUPDESCRIPTORW fileGroupDescriptor = (NativeMethods.FILEGROUPDESCRIPTORW)fileGroupDescriptorObject;
+                        var fileGroupDescriptorObject = Marshal.PtrToStructure(fileGroupDescriptorWPointer, typeof(NativeMethods.FILEGROUPDESCRIPTORW));
+                        var fileGroupDescriptor = (NativeMethods.FILEGROUPDESCRIPTORW)fileGroupDescriptorObject;
 
                         //create a new array to store file names in of the number of items in the file group descriptor
-                        string[] fileNames = new string[fileGroupDescriptor.cItems];
+                        var fileNames = new string[fileGroupDescriptor.cItems];
 
                         //get the pointer to the first file descriptor
-                        IntPtr fileDescriptorPointer = (IntPtr)((int)fileGroupDescriptorWPointer + Marshal.SizeOf(fileGroupDescriptorWPointer));
+                        var fileDescriptorPointer = (IntPtr)((int)fileGroupDescriptorWPointer + Marshal.SizeOf(fileGroupDescriptorWPointer));
 
                         //loop for the number of files acording to the file group descriptor
-                        for (int fileDescriptorIndex = 0; fileDescriptorIndex < fileGroupDescriptor.cItems; fileDescriptorIndex++)
+                        for (var fileDescriptorIndex = 0; fileDescriptorIndex < fileGroupDescriptor.cItems; fileDescriptorIndex++)
                         {
                             //marshal the pointer top the file descriptor as a FILEDESCRIPTORW struct and get the file name
-                            NativeMethods.FILEDESCRIPTORW fileDescriptor = (NativeMethods.FILEDESCRIPTORW)Marshal.PtrToStructure(fileDescriptorPointer, typeof(NativeMethods.FILEDESCRIPTORW));
+                            var fileDescriptor = (NativeMethods.FILEDESCRIPTORW)Marshal.PtrToStructure(fileDescriptorPointer, typeof(NativeMethods.FILEDESCRIPTORW));
                             fileNames[fileDescriptorIndex] = fileDescriptor.cFileName;
 
                             //move the file descriptor pointer to the next file descriptor
@@ -329,16 +329,16 @@ namespace iwantedue.Windows.Forms
                     //a array of MemoryStreams containing the data to each file dropped
 
                     //get the array of filenames which lets us know how many file contents exist
-                    string[] fileContentNames = (string[])this.GetData("FileGroupDescriptor");
+                    var fileContentNames = (string[])GetData("FileGroupDescriptor");
 
                     //create a MemoryStream array to store the file contents
-                    MemoryStream[] fileContents = new MemoryStream[fileContentNames.Length];
+                    var fileContents = new MemoryStream[fileContentNames.Length];
 
                     //loop for the number of files acording to the file names
-                    for(int fileIndex = 0;fileIndex < fileContentNames.Length;fileIndex++)
+                    for(var fileIndex = 0;fileIndex < fileContentNames.Length;fileIndex++)
                     {
                         //get the data at the file index and store in array
-                        fileContents[fileIndex] = this.GetData(format, fileIndex);
+                        fileContents[fileIndex] = GetData(format, fileIndex);
                     }
 
                     //return array of MemoryStreams containing file contents
@@ -346,7 +346,7 @@ namespace iwantedue.Windows.Forms
             }
 
             //use underlying IDataObject to handle getting of data
-            return this.underlyingDataObject.GetData(format, autoConvert);
+            return underlyingDataObject.GetData(format, autoConvert);
         }
 
         /// <summary>
@@ -360,7 +360,7 @@ namespace iwantedue.Windows.Forms
         public MemoryStream GetData(string format, int index)
         {
             //create a FORMATETC struct to request the data with
-            FORMATETC formatetc = new FORMATETC();
+            var formatetc = new FORMATETC();
             formatetc.cfFormat = (short)DataFormats.GetFormat(format).Id;
             formatetc.dwAspect = DVASPECT.DVASPECT_CONTENT;
             formatetc.lindex = index;
@@ -368,10 +368,10 @@ namespace iwantedue.Windows.Forms
             formatetc.tymed = TYMED.TYMED_ISTREAM | TYMED.TYMED_ISTORAGE | TYMED.TYMED_HGLOBAL;
 
             //create STGMEDIUM to output request results into
-            STGMEDIUM medium = new STGMEDIUM();
+            var medium = new STGMEDIUM();
 
             //using the Com IDataObject interface get the data using the defined FORMATETC
-            this.comUnderlyingDataObject.GetData(ref formatetc, out medium);
+            comUnderlyingDataObject.GetData(ref formatetc, out medium);
 
             //retrieve the data depending on the returned store type
             switch(medium.tymed)
@@ -403,10 +403,10 @@ namespace iwantedue.Windows.Forms
                         //get the STATSTG of the ILockBytes to determine how many bytes were written to it
                         iLockBytesStat = new System.Runtime.InteropServices.ComTypes.STATSTG();
                         iLockBytes.Stat(out iLockBytesStat, 1);
-                        int iLockBytesSize = (int)iLockBytesStat.cbSize;
+                        var iLockBytesSize = (int)iLockBytesStat.cbSize;
 
                         //read the data from the ILockBytes (unmanaged byte array) into a managed byte array
-                        byte[] iLockBytesContent = new byte[iLockBytesSize];
+                        var iLockBytesContent = new byte[iLockBytesSize];
                         iLockBytes.ReadAt(0, iLockBytesContent, iLockBytesContent.Length, null);
 
                         //wrapped the managed byte array into a memory stream and return it
@@ -435,10 +435,10 @@ namespace iwantedue.Windows.Forms
                         //get the STATSTG of the IStream to determine how many bytes are in it
                         iStreamStat = new System.Runtime.InteropServices.ComTypes.STATSTG();
                         iStream.Stat(out iStreamStat, 0);
-                        int iStreamSize = (int)iStreamStat.cbSize;
+                        var iStreamSize = (int)iStreamStat.cbSize;
                         
                         //read the data from the IStream into a managed byte array
-                        byte[] iStreamContent = new byte[iStreamSize];
+                        var iStreamContent = new byte[iStreamSize];
                         iStream.Read(iStreamContent, iStreamContent.Length, IntPtr.Zero);
 
                         //wrapped the managed byte array into a memory stream and return it
@@ -454,7 +454,7 @@ namespace iwantedue.Windows.Forms
                     //to handle a HGlobal the exisitng "GetDataFromHGLOBLAL" method is invoked via
                     //reflection
 
-                    return (MemoryStream)this.getDataFromHGLOBLALMethod.Invoke(this.oleUnderlyingDataObject, new object[] { DataFormats.GetFormat((short)formatetc.cfFormat).Name, medium.unionmember });
+                    return (MemoryStream)getDataFromHGLOBLALMethod.Invoke(oleUnderlyingDataObject, new object[] { DataFormats.GetFormat((short)formatetc.cfFormat).Name, medium.unionmember });
             }
 
             return null;
@@ -469,7 +469,7 @@ namespace iwantedue.Windows.Forms
         /// </returns>
         public bool GetDataPresent(Type format)
         {
-            return this.underlyingDataObject.GetDataPresent(format);
+            return underlyingDataObject.GetDataPresent(format);
         }
 
         /// <summary>
@@ -481,7 +481,7 @@ namespace iwantedue.Windows.Forms
         /// </returns>
         public bool GetDataPresent(string format)
         {
-            return this.underlyingDataObject.GetDataPresent(format);
+            return underlyingDataObject.GetDataPresent(format);
         }
 
         /// <summary>
@@ -494,7 +494,7 @@ namespace iwantedue.Windows.Forms
         /// </returns>
         public bool GetDataPresent(string format, bool autoConvert)
         {
-            return this.underlyingDataObject.GetDataPresent(format, autoConvert);
+            return underlyingDataObject.GetDataPresent(format, autoConvert);
         }
 
         /// <summary>
@@ -505,7 +505,7 @@ namespace iwantedue.Windows.Forms
         /// </returns>
         public string[] GetFormats()
         {
-            return this.underlyingDataObject.GetFormats();
+            return underlyingDataObject.GetFormats();
         }
 
         /// <summary>
@@ -517,7 +517,7 @@ namespace iwantedue.Windows.Forms
         /// </returns>
         public string[] GetFormats(bool autoConvert)
         {
-            return this.underlyingDataObject.GetFormats(autoConvert);
+            return underlyingDataObject.GetFormats(autoConvert);
         }
 
         /// <summary>
@@ -526,7 +526,7 @@ namespace iwantedue.Windows.Forms
         /// <param name="data">The data to store.</param>
         public void SetData(object data)
         {
-            this.underlyingDataObject.SetData(data);
+            underlyingDataObject.SetData(data);
         }
 
         /// <summary>
@@ -536,7 +536,7 @@ namespace iwantedue.Windows.Forms
         /// <param name="data">The data to store.</param>
         public void SetData(Type format, object data)
         {
-            this.underlyingDataObject.SetData(format, data);
+            underlyingDataObject.SetData(format, data);
         }
 
         /// <summary>
@@ -546,7 +546,7 @@ namespace iwantedue.Windows.Forms
         /// <param name="data">The data to store.</param>
         public void SetData(string format, object data)
         {
-            this.underlyingDataObject.SetData(format, data);
+            underlyingDataObject.SetData(format, data);
         }
 
         /// <summary>
@@ -557,7 +557,7 @@ namespace iwantedue.Windows.Forms
         /// <param name="data">The data to store.</param>
         public void SetData(string format, bool autoConvert, object data)
         {
-            this.underlyingDataObject.SetData(format, autoConvert, data);
+            underlyingDataObject.SetData(format, autoConvert, data);
         }
 
         #endregion

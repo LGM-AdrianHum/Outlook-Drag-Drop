@@ -1,14 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
 using System.IO;
-using System.Text;
 using System.Windows.Forms;
-using iwantedue.Windows.Forms;
-using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.ComTypes;
 
 namespace DragDropTest
 {
@@ -22,10 +13,10 @@ namespace DragDropTest
         private void Form1_DragEnter(object sender, DragEventArgs e)
         {
             //display formats available
-            this.label1.Text = "Formats:\n";
-            foreach (string format in e.Data.GetFormats())
+            label1.Text = "Formats:\n";
+            foreach (var format in e.Data.GetFormats())
             {
-                this.label1.Text += "    " + format + "\n";
+                label1.Text += "    " + format + "\n";
             }
 
             //ensure FileGroupDescriptor is present before allowing drop
@@ -38,22 +29,22 @@ namespace DragDropTest
         private void Form1_DragDrop(object sender, DragEventArgs e)
         {
             //wrap standard IDataObject in OutlookDataObject
-            OutlookDataObject dataObject = new OutlookDataObject(e.Data);
+            var dataObject = new OutlookDataObject(e.Data);
 
             //get the names and data streams of the files dropped
-            string[] filenames = (string[])dataObject.GetData("FileGroupDescriptorW");
-            MemoryStream[] filestreams = (MemoryStream[])dataObject.GetData("FileContents");
+            var filenames = (string[])dataObject.GetData("FileGroupDescriptorW");
+            var filestreams = (MemoryStream[])dataObject.GetData("FileContents");
 
-            this.label1.Text += "Files:\n";
-            for (int fileIndex = 0; fileIndex < filenames.Length; fileIndex++)
+            label1.Text += "Files:\n";
+            for (var fileIndex = 0; fileIndex < filenames.Length; fileIndex++)
             {
                 //use the fileindex to get the name and data stream
-                string filename = filenames[fileIndex];
-                MemoryStream filestream = filestreams[fileIndex];
-                this.label1.Text += "    " + filename + "\n";
+                var filename = filenames[fileIndex];
+                var filestream = filestreams[fileIndex];
+                label1.Text += "    " + filename + "\n";
 
                 //save the file stream using its name to the application path
-                FileStream outputStream = File.Create(filename);
+                var outputStream = File.Create(filename);
                 filestream.WriteTo(outputStream);
                 outputStream.Close();
             }
